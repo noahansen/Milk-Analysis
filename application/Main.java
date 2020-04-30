@@ -19,10 +19,17 @@
  */
 package application;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.util.List;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -34,26 +41,35 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 /**
  * Main - Drives a milk analysis application that displays milk weight measurements in a table
  * 
+ * TODO: The UI must provide sufficient instructions and help tips for new users to navigate.
+ * 
+ * TODO: how will we edit the table? have a create table for each method?
+ * 
  * @author Noah Hansen (2020)
  * @author Gunnar Schmitz
- *
  */
 public class Main extends Application {
 
   private static final int WINDOW_WIDTH = 1000;
   private static final int WINDOW_HEIGHT = 500;
   private static final String APP_TITLE = "Milk Analysis";
+  private static final FileChooser fileChooser = new FileChooser();
+  private Stage primaryStage = null;
+  private MilkStore ds = new MilkStore();
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
   public void start(Stage primaryStage) throws Exception {
-
+    this.primaryStage = primaryStage;
 
     // Main layout is Border Pane example (top,left,center,right,bottom)
     BorderPane root = new BorderPane();
@@ -74,42 +90,24 @@ public class Main extends Application {
     edit_table.setPadding(new Insets(40, 10, 10, 10));
 
 
-    // TODO put in method. creates the table
-    final TableView table = new TableView();
-    final ObservableList<Month> data =
-        FXCollections.observableArrayList(new Month("5", "%", "1"), new Month("59", "%", "2"),
-            new Month("9", "%", "3"), new Month("95", "%", "4"), new Month("59", "%", "5"));
-
-    table.setEditable(true);
-
-    TableColumn weightCol = new TableColumn("Weight");
-    weightCol.setMinWidth(100);
-    weightCol.setCellValueFactory(new PropertyValueFactory<>("weight"));
-
-    TableColumn pctCol = new TableColumn("Percent");
-    pctCol.setMinWidth(100);
-    pctCol.setCellValueFactory(new PropertyValueFactory<>("percent"));
-
-    TableColumn monthCol = new TableColumn("Month");
-    monthCol.setMinWidth(100);
-    monthCol.setCellValueFactory(new PropertyValueFactory<>("month"));
-    table.setItems(data);
-    table.getColumns().addAll(weightCol, pctCol, monthCol);
-    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-
     VBox left_box = new VBox(getFilters(), edit_table);
-
-    VBox center = new VBox(report_menu, table);
+    VBox center = new VBox(report_menu, create_table());
 
     Button json = new Button("Download JSON");
     Button csv = new Button("Download CSV");
+
     GridPane grid = new GridPane();
     Text input = new Text("Input File(s):");
-    Button textField = new Button("Browse");
+
+    // Set to only show csv files
+    fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+    Button browse = new Button("Browse");
+    browse.setOnAction(new BrowseHandler()); // allows file selection
+
+
     grid.addRow(0, input);
     grid.addRow(1, csv);
-    grid.add(textField, 1, 0);
+    grid.add(browse, 1, 0);
     grid.add(json, 1, 1);
     // spacing
     grid.setVgap(30);
@@ -131,7 +129,106 @@ public class Main extends Application {
     primaryStage.show();
   }
 
+  /**
+   * BrowseHandler - displays file search dialogue. Reads selected file(s) into the DS. Populates
+   * table with monthly report by default.
+   */
+  class BrowseHandler implements EventHandler<ActionEvent> {
 
+    @Override
+    public void handle(ActionEvent arg0) {
+      List<File> files = fileChooser.showOpenMultipleDialog(primaryStage);
+      // TODO populate data.
+      // TODO input validation... Just catch an exception?
+      if (files == null) {
+        return;
+      }
+
+      int skipCount = 0;
+      String line = "";
+
+      // Parse though each file, adding the items to the DS
+      for (File file : files) {
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+
+          while ((line = br.readLine()) != null) {
+            String[] row = line.split(",");
+            String date = row[0];
+            String farmId = row[1];
+            int weight = Integer.parseInt(row[2]);
+            String[] dateParts = date.split("-");
+            if (dateParts.length < 3) { // invalid, ignore
+              skipCount++;
+              continue;
+            } // TODO handle invalid data
+            int year = Integer.parseInt(dateParts[0]);
+            int month = Integer.parseInt(dateParts[1]);
+            int day = Integer.parseInt(dateParts[2]);
+
+            ds.insert(farmId, year, month, day, weight);
+
+          }
+
+        } catch (Exception e) {
+          dispMessage("There was a problem with the file.");
+          ds = new MilkStore(); // Ditch the data read in before the fail
+        }
+      }
+    }
+  }
+
+  /**
+   * make another window with the given message
+   * 
+   * @param message
+   */
+  private void dispMessage(String message) {
+    Stage stage = new Stage();
+    stage.setTitle("Message");
+    Text text = new Text(message);
+    text.setFont(Font.font("Avenir", FontWeight.BOLD, 20));
+    text.setFill(Color.CADETBLUE);
+    text.setX(10);
+    text.setY(50);
+
+    Group root = new Group(text);
+    Scene scene = new Scene(root);// 300, 100
+    stage.setScene(scene);
+    stage.show();
+  }
+
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private TableView create_table() {
+    final TableView table = new TableView();
+
+    // TODO: Populate with values from csv?
+    final ObservableList<Month> data =
+        FXCollections.observableArrayList(new Month("5", "%", "1"), new Month("59", "%", "2"),
+            new Month("9", "%", "3"), new Month("95", "%", "4"), new Month("59", "%", "5"));
+
+    table.setEditable(true);
+
+    TableColumn weightCol = new TableColumn("Weight");
+    TableColumn pctCol = new TableColumn("Percent");
+    TableColumn monthCol = new TableColumn("Month");
+
+    weightCol.setMinWidth(100);
+    pctCol.setMinWidth(100);
+    monthCol.setMinWidth(100);
+
+    weightCol.setCellValueFactory(new PropertyValueFactory<>("weight"));
+    pctCol.setCellValueFactory(new PropertyValueFactory<>("percent"));
+    monthCol.setCellValueFactory(new PropertyValueFactory<>("month"));
+
+    table.setItems(data);
+    table.getColumns().addAll(weightCol, pctCol, monthCol);
+    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+    return table;
+  }
+
+  // TODO have keep track of all the filter values and only show relevant ones
   private GridPane getFilters() {
     GridPane grid = new GridPane();
     grid.setPadding(new Insets(10, 10, 10, 10));
