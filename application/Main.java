@@ -157,6 +157,8 @@ public class Main extends Application {
       for (File file : files) {
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
 
+          br.readLine(); // consume the header
+
           while ((line = br.readLine()) != null) {
             String[] row = line.split(",");
             String date = row[0];
@@ -177,6 +179,7 @@ public class Main extends Application {
 
         } catch (Exception e) {
           dispMessage("There was a problem with the file.");
+          e.printStackTrace();
           ds = new MilkStore(); // Ditch the data read in before the fail
         }
       }

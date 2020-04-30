@@ -47,6 +47,7 @@ public class MilkStore {
 
     Farm(String id) {
       this.id = id;
+      this.years = new ArrayList<Year>();
     }
 
     @Override
@@ -58,7 +59,7 @@ public class MilkStore {
     }
 
     private Year getYear(Year year) {
-      if (farms.isEmpty())
+      if (years.isEmpty())
         this.years.add(year);
 
       for (Year curr : this.years) { // see if this farm already exists
@@ -126,7 +127,7 @@ public class MilkStore {
     Year toInsert = new Year(year);
     Year found = farm.getYear(toInsert); // the year object with the milk we want
 
-    found.milkWeight[month][day] = weight;
+    found.milkWeight[month - 1][day - 1] = weight;
   }
 
 
@@ -144,7 +145,7 @@ public class MilkStore {
     Year toInsert = new Year(year);
     Year found = farm.getYear(toInsert); // the year object with the milk we want
 
-    return found.milkWeight[month][day];
+    return found.milkWeight[month - 1][day - 1];
   }
 
 
@@ -158,7 +159,7 @@ public class MilkStore {
     Year toInsert = new Year(year);
     Year found = farm.getYear(toInsert); // the year object with the milk we want
 
-    found.milkWeight[month][day] = 0;
+    found.milkWeight[month - 1][day - 1] = 0;
   }
 
   // How to write this out to a csv....
