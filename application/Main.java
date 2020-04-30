@@ -79,9 +79,15 @@ public class Main extends Application {
     ComboBox<String> report_menu =
         new ComboBox<String>(FXCollections.observableArrayList(report_types));
 
-    report_menu.setPromptText("Select a Report");
+    // TODO when these are selected, get to see input values somehow... global variables.
+    // maybe don't diplay table until apply button is pressed
+    // only display buttons based on what thing is set
+    // pressing a button sets a global variable?
+    // is globals the best way to do this
+    // apply event handler will call displayReport with the necessary arguments set.
 
-    // TilePane tp = new TilePane(getFilters());
+
+    report_menu.setPromptText("Select a Report");
 
     Button edit = new Button("Edit Table");
     Button confirm = new Button("Confirm");
