@@ -6,7 +6,7 @@
 - Allows the user to read in and visualize the milk weight data gathered from each farm by month.
 - The user can analyze the contributions of a single farm over specified time periods, or compare multiple farms.
 
-## notes
+## Notes
 The small-large files are example input data. The missing and error files contain invalid input
 
 Course: CS 400
